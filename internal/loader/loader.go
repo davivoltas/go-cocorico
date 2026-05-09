@@ -221,7 +221,7 @@ func envIntOrDefault(name string, fallback int) int {
 }
 
 func precomputeResponses(idx *model.Index) {
-	denyFrom := envIntOrDefault("FRAUD_DENY_FROM", 3)
+	denyFrom := envIntOrDefault("FRAUD_DENY_FROM", 2)
 	if denyFrom < 0 {
 		denyFrom = 0
 	}

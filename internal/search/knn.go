@@ -110,24 +110,15 @@ func searchBucketed(idx *model.Index, query *[14]float32) int {
 	for i := range top {
 		top[i].distSq = math.MaxFloat32
 	}
-	maxDist := float32(math.MaxFloat32)
-	maxIdx := 0
 
 	key := uint32(center0) | (uint32(center1) << 8) | (uint32(center2) << 16)
 	ids := idx.Buckets[key]
 	for _, id := range ids {
 		entry := &idx.Refs[id]
 		distSq := squaredEuclideanDist(query, &entry.V)
+		maxIdx, maxDist := farthestNeighbor(top)
 		if distSq < maxDist {
 			top[maxIdx] = neighbor{distSq: distSq, isFraud: entry.IsFraud}
-			maxDist = top[0].distSq
-			maxIdx = 0
-			for j := 1; j < K; j++ {
-				if top[j].distSq > maxDist {
-					maxDist = top[j].distSq
-					maxIdx = j
-				}
-			}
 		}
 	}
 
@@ -379,29 +370,15 @@ func searchSequential(refs []model.RefEntry, query *[14]float32) int {
 		top[i].distSq = math.MaxFloat32 // Inicializa com infinito
 	}
 
-	// maxIdx indica qual vizinho tem a maior distância (pior match entre os K).
-	// Isso nos permite descartar vizinhos piores que este.
-	maxDist := float32(math.MaxFloat32)
-	maxIdx := 0
-
 	// Scan linear de todos os vetores.
 	for i := range refs {
 		// Calcula distância entre query e refs[i].V
 		distSq := squaredEuclideanDist(query, &refs[i].V)
 
 		// Se essa distância é menor que a pior distância nos K top, substitui.
+		maxIdx, maxDist := farthestNeighbor(top)
 		if distSq < maxDist {
 			top[maxIdx] = neighbor{distSq: distSq, isFraud: refs[i].IsFraud}
-
-			// Encontra novo máximo entre os K.
-			maxDist = top[0].distSq
-			maxIdx = 0
-			for j := 1; j < K; j++ {
-				if top[j].distSq > maxDist {
-					maxDist = top[j].distSq
-					maxIdx = j
-				}
-			}
 		}
 	}
 
@@ -422,21 +399,12 @@ func searchShard(refs []model.RefEntry, query *[14]float32) [K]neighbor {
 	for i := range top {
 		top[i].distSq = math.MaxFloat32
 	}
-	maxDist := float32(math.MaxFloat32)
-	maxIdx := 0
 
 	for i := range refs {
 		distSq := squaredEuclideanDist(query, &refs[i].V)
+		maxIdx, maxDist := farthestNeighbor(top)
 		if distSq < maxDist {
 			top[maxIdx] = neighbor{distSq: distSq, isFraud: refs[i].IsFraud}
-			maxDist = top[0].distSq
-			maxIdx = 0
-			for j := 1; j < K; j++ {
-				if top[j].distSq > maxDist {
-					maxDist = top[j].distSq
-					maxIdx = j
-				}
-			}
 		}
 	}
 	return top
@@ -461,21 +429,12 @@ func knnParallel(shards [][]model.RefEntry, query *[14]float32) int {
 	for i := range merged {
 		merged[i].distSq = math.MaxFloat32
 	}
-	maxDist := float32(math.MaxFloat32)
-	maxIdx := 0
 
 	for _, top := range tops {
 		for _, n := range top {
+			maxIdx, maxDist := farthestNeighbor(merged)
 			if n.distSq < maxDist {
 				merged[maxIdx] = n
-				maxDist = merged[0].distSq
-				maxIdx = 0
-				for j := 1; j < K; j++ {
-					if merged[j].distSq > maxDist {
-						maxDist = merged[j].distSq
-						maxIdx = j
-					}
-				}
 			}
 		}
 	}
@@ -503,9 +462,6 @@ func searchStreamingFromFile(path string, query *[14]float32) int {
 		top[i].distSq = math.MaxFloat32
 	}
 
-	maxDist := float32(math.MaxFloat32)
-	maxIdx := 0
-
 	for {
 		entry, err := stream.nextEntry()
 		if err == io.EOF {
@@ -516,17 +472,9 @@ func searchStreamingFromFile(path string, query *[14]float32) int {
 		}
 
 		distSq := squaredEuclideanDist(query, &entry.V)
+		maxIdx, maxDist := farthestNeighbor(top)
 		if distSq < maxDist {
 			top[maxIdx] = neighbor{distSq: distSq, isFraud: entry.IsFraud}
-
-			maxDist = top[0].distSq
-			maxIdx = 0
-			for j := 1; j < K; j++ {
-				if top[j].distSq > maxDist {
-					maxDist = top[j].distSq
-					maxIdx = j
-				}
-			}
 		}
 	}
 
@@ -544,6 +492,18 @@ func searchStreamingFromFile(path string, query *[14]float32) int {
 // fraud_score = number_of_frauds / K
 func ComputeFraudScore(fraudCount int) float32 {
 	return float32(fraudCount) / float32(K)
+}
+
+func farthestNeighbor(top [K]neighbor) (int, float32) {
+	maxIdx := 0
+	maxDist := top[0].distSq
+	for i := 1; i < K; i++ {
+		if top[i].distSq > maxDist {
+			maxDist = top[i].distSq
+			maxIdx = i
+		}
+	}
+	return maxIdx, maxDist
 }
 
 // ShouldApprove decide se a transação deve ser aprovada baseado no fraud_score.
