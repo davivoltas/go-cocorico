@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   # App 1: primeira instância da API
   app1:
-    image: go-cocorico:latest
+    image: ghcr.io/davivoltas/go-cocorico:latest
     container_name: cocorico-app1
     networks:
       - backend
@@ -32,7 +30,7 @@ services:
 
   # App 2: segunda instância da API (idêntica à app1)
   app2:
-    image: go-cocorico:latest
+    image: ghcr.io/davivoltas/go-cocorico:latest
     container_name: cocorico-app2
     networks:
       - backend
