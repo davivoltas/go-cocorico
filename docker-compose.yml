@@ -3,11 +3,6 @@ version: '3.8'
 services:
   # App 1: primeira instância da API
   app1:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        GOGC: 300
     image: go-cocorico:latest
     container_name: cocorico-app1
     networks:
@@ -37,11 +32,6 @@ services:
 
   # App 2: segunda instância da API (idêntica à app1)
   app2:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        GOGC: 300
     image: go-cocorico:latest
     container_name: cocorico-app2
     networks:
