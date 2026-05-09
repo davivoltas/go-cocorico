@@ -1,0 +1,7 @@
+{
+    "participants": ["Davi Voltas"],
+    "social": ["https://github.com/davivoltas/", "https://www.linkedin.com/in/davivoltas"],
+    "source-code-repo": "https://github.com/davivoltas/go-cocorico",
+    "stack": ["Go", "Nginx", "Docker", "Fasthttp"],
+    "open_to_work": false
+}

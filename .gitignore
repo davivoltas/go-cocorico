@@ -1,0 +1,13 @@
+bin/
+*.o
+*.a
+*.so
+.DS_Store
+*.out
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.exe
+go.sum
